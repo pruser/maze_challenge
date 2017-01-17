@@ -20,11 +20,17 @@ struct I {
   static const int val = n;
 };
 
+template<int i1, int i2>
+constexpr bool operator==(const I<i1>&, const I<i2>&) {
+  return i1 == i2;
+}
+
 using M = List<
   List< I<0>, I<0>, I<0>, I<0> >,
   List< I<0>, I<0>, I<0>, I<0> >,
   List< I<0>, I<0>, I<0>, I<0> >
 >;
+
 
 template <typename X>
 constexpr auto find_position(size_t i, X x, List<>){
@@ -69,31 +75,65 @@ constexpr auto find_position2(X x, List<T...> t) {
   return find_position2(0, x, t);
 }
 
-constexpr auto get(std::size_t i, List<>) {
-	return std::optional<int>{};
-}
-
-template <typename T1, typename... T>
-constexpr auto get(std::size_t i, List<T1, T...>) {
-	if(i==0) return std::make_optional(T1::val);
-  	else return get(i-1, List<T...>{});
-}
-
 template <typename T>
-constexpr auto get(std::size_t i, TypedList<T>) {
-    return std::optional<T>{};
+constexpr auto _get(std::size_t i, TypedList<T>) {
+  return std::optional<T>{};
 }
 
 template <typename T, T t1, T... args>
-constexpr auto get(std::size_t i, TypedList<T, t1, args...>) {
-    if(i==0) return std::make_optional(t1);
-    else return get(i-1, TypedList<T, args...>{});
+constexpr auto _get(std::size_t i, TypedList<T, t1, args...>) {
+  if(i==0) return std::make_optional(t1);
+  else return _get(i-1, TypedList<T, args...>{});
+}
+
+template <typename T, T... args>
+constexpr auto get(std::size_t i, TypedList<T, args...> t) {
+  return _get(i, t);
+}
+
+template <std::size_t i, typename T, T t, T... args>
+struct _get_impl_typedlist {
+  static const T value = _get_impl_typedlist<i-1, T, args...>::value;
+};
+
+template <typename T, T t, T... args>
+struct _get_impl_typedlist<0, T, t, args...> {
+  static const T value = t;
+};
+
+template <std::size_t i, typename T, T... args>
+constexpr auto get(TypedList<T, args...> t) {
+  static_assert(i <= sizeof...(args), "");
+  return _get_impl_typedlist<i, T, args...>::value;
+}
+
+
+template <std::size_t i, typename T1, typename... T>
+struct _get_impl_list {
+  using Type = typename _get_impl_list<i-1, T...>::Type;
+};
+
+template <typename T1, typename... T>
+struct _get_impl_list<0, T1, T...> {
+  using Type = T1;
+};
+
+template <std::size_t i, typename... T>
+constexpr auto get(List<T...> t) {
+  static_assert(i <= sizeof...(T), "");
+  return typename _get_impl_list<i, T...>::Type{};
+}
+
+template <std::size_t y, std::size_t x, typename T>
+constexpr auto get(T t) {
+  return get<x>(get<y>(t));
 }
 
 int main() {
   {
     static_assert(find_position(I<1>{}, List<I<0>, I<2>, I<1>, I<0>>{}) == std::optional<size_t>{2}, "");
   }
+  
   {
     using M1 = List<
       List< I<0>, I<0>, I<0>, I<0> >,
@@ -102,12 +142,26 @@ int main() {
     >;
     static_assert(find_position2(I<1>{}, M1{}) == std::make_optional(Position(1,2)), "");
   }
+  
   {
-    static_assert(get(2, List<I<0>, I<2>, I<1>, I<0>>{}) == std::optional<int>{1}, "");
+    static_assert(get<2>(List<I<0>, I<2>, I<1>, I<0>>{}) == I<1>{}, "");
+  }
+  
+  {
+    static_assert(get<2>(TypedList<int, 0, 2, 1, 0>{}) == 1, "");
   }
   
   {
     static_assert(get(2, TypedList<int, 0, 2, 1, 0>{}) == std::optional<int>{1}, "");
+  }
+  
+  {
+    using M1 = List<
+      TypedList<int, 0,0,0,0 >,
+      TypedList<int, 0,0,1,0 >,
+      TypedList<int, 0,0,0,0 >
+    >;
+   	static_assert(get<1,2>(M1{}) == 1, "");
   }
   
   return 0;
