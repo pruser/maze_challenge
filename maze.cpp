@@ -15,14 +15,14 @@ struct List {};
 template <typename T, T... Args>
 struct TypedList {};
 
-template <int n>
+template <int N>
 struct I {
-  static const int val = n;
+  static const int val = N;
 };
 
-template<int i1, int i2>
-constexpr bool operator==(const I<i1>&, const I<i2>&) {
-  return i1 == i2;
+template<int I1, int I2>
+constexpr bool operator==(const I<I1>&, const I<I2>&) {
+  return I1 == I2;
 }
 
 using M = List<
@@ -101,16 +101,16 @@ struct _get_impl_typedlist<0, T, t, args...> {
   static const T value = t;
 };
 
-template <std::size_t i, typename T, T... args>
+template <std::size_t I, typename T, T... args>
 constexpr auto get(TypedList<T, args...> t) {
-  static_assert(i <= sizeof...(args), "");
-  return _get_impl_typedlist<i, T, args...>::value;
+  static_assert(I <= sizeof...(args), "");
+  return _get_impl_typedlist<I, T, args...>::value;
 }
 
 
-template <std::size_t i, typename T1, typename... T>
+template <std::size_t I, typename T1, typename... T>
 struct _get_impl_list {
-  using Type = typename _get_impl_list<i-1, T...>::Type;
+  using Type = typename _get_impl_list<I-1, T...>::Type;
 };
 
 template <typename T1, typename... T>
@@ -118,15 +118,15 @@ struct _get_impl_list<0, T1, T...> {
   using Type = T1;
 };
 
-template <std::size_t i, typename... T>
+template <std::size_t I, typename... T>
 constexpr auto get(List<T...> t) {
-  static_assert(i <= sizeof...(T), "");
-  return typename _get_impl_list<i, T...>::Type{};
+  static_assert(I <= sizeof...(T), "");
+  return typename _get_impl_list<I, T...>::Type{};
 }
 
-template <std::size_t y, std::size_t x, typename T>
+template <std::size_t Y, std::size_t X, typename T>
 constexpr auto get(T t) {
-  return get<x>(get<y>(t));
+  return get<X>(get<Y>(t));
 }
 
 int main() {
