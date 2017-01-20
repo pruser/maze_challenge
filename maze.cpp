@@ -31,6 +31,16 @@ using M = List<
   List< I<0>, I<0>, I<0>, I<0> >
 >;
 
+template <typename X, typename T>
+constexpr bool contains(X x, TypedList<T>) {
+  return false;
+}
+
+template <typename X, typename T, T t1, T... args>
+constexpr bool contains(X x, TypedList<T, t1, args...>) {
+  if(x == t1) return true;
+  else return contains(x, TypedList<T, args...>{});
+}
 
 template <typename X>
 constexpr auto find_position(size_t i, X x, List<>){
@@ -144,6 +154,14 @@ int main() {
   }
   
   {
+    static_assert(contains(1, TypedList<int, 0, 2, 1, 0>{}) == true, "");
+  }
+  
+  {
+    static_assert(contains(3, TypedList<int, 0, 2, 1, 0>{}) == false, "");
+  }
+  
+  {
     static_assert(get<2>(List<I<0>, I<2>, I<1>, I<0>>{}) == I<1>{}, "");
   }
   
@@ -163,6 +181,5 @@ int main() {
     >;
    	static_assert(get<1,2>(M1{}) == 1, "");
   }
-  
-  return 0;
+  return 0;  
 }
